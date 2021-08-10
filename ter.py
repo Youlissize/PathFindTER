@@ -5,6 +5,7 @@ import os
 import requests
 import zipfile
 from tqdm import tqdm
+import json
 
 #update les données si : pas dans dossier ou n'importe quel argument en executant le script
 larg=[]
@@ -29,29 +30,40 @@ trips=pd.read_csv("trips.txt")
 #du coup on fait une liste de chaque arrêt avec leurs id, nom et position et on initie un dictionaire qui à chaque arrêt va donner la liste de ses voisins 
 stoppointsfull=stops.groupby("location_type").get_group(0)
 stoppoints=stoppointsfull[["stop_id","stop_name","stop_lon","stop_lat"]]
-neighbours=dict(zip([i for i in stoppoints.stop_id],[[] for i in stoppoints.stop_id]))
+neighbours=dict(zip([i for i in stoppoints.stop_id],[set([]) for i in stoppoints.stop_id]))
 
 # et maintenant on créé une fonction qui itere de manière bien degueulasse sur chacun des 230244 trajets individuels, et on prend la liste ordonnée de ses arrêts, puis on en tire les voisins et on en remplit le dictionaire neighbours créé plus haut pour l'arrêt en question
 # le tqdm il sert à avoir une barre de chargement pour se rendre compte que sur mon pc ça prendrait 6h de calculs
 pastgsids=[]
+groupedbytrip=stop_times.groupby('trip_id')
 def get_neighbours():
     for i in tqdm(stop_times.trip_id):
-        g=stop_times.groupby('trip_id').get_group(i)
-        gsid=[]
-        for sid in g.stop_id:
-            gsid.append(sid)
+        g=groupedbytrip.get_group(i)
+        gsid=[sid for sid in g.stop_id]
         if set(gsid) not in pastgsids:
             for i,n in zip(gsid,range(len(gsid))):
                 if n==0:
-                    neighbours[i].append(gsid[1])
+                    neighbours[i].update([gsid[1]])
                 if n==len(gsid)-1:
-                    neighbours[i].append(gsid[-2])
+                    neighbours[i].update([gsid[-2]])
                 else:
-                    neighbours[i].append(gsid[n+1])
-                    neighbours[i].append(gsid[n-1])
-        pastgsids.append(set(gsid))
+                    neighbours[i].update([gsid[n+1]])
+                    neighbours[i].update([gsid[n-1]])
+            pastgsids.append(set(gsid))
 
 get_neighbours()
+
+neighbourslisted = {k: list(v) for k, v in neighbours.items()}
+
+# maintenant pour sauvegarder les résultats dans des fichiers
+with open('neighbours.json', 'w') as f:
+    json.dump(neighbourslisted,f)
+
+with open('stoppoints.json', 'w') as f:
+    f.write(stoppoints.to_json(orient="table",force_ascii=False,index=False))
+
+with open("uniquetrips.txt","w") as f:
+    f.write(str(pastgsids))
 
 #joli gui pour visualiser les données si jamais
 #from pandasgui import show
