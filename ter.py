@@ -32,8 +32,7 @@ stoppointsfull=stops.groupby("location_type").get_group(0)
 stoppoints=stoppointsfull[["stop_id","stop_name","stop_lon","stop_lat"]]
 neighbours=dict(zip([i for i in stoppoints.stop_id],[set([]) for i in stoppoints.stop_id]))
 
-# et maintenant on créé une fonction qui itere de manière bien degueulasse sur chacun des 230244 trajets individuels, et on prend la liste ordonnée de ses arrêts, puis on en tire les voisins et on en remplit le dictionaire neighbours créé plus haut pour l'arrêt en question
-# le tqdm il sert à avoir une barre de chargement pour se rendre compte que sur mon pc ça prendrait 6h de calculs
+# du coup ça ça itere sur chaque voyage et ça remplit le dico neighbours avec les voisins de chaque stop
 pastgsids=[]
 groupedbytrip=stop_times.groupby('trip_id')
 def get_neighbours():
@@ -64,6 +63,10 @@ with open('stoppoints.json', 'w') as f:
 
 with open("uniquetrips.txt","w") as f:
     f.write(str(pastgsids))
+
+#essai d'itinéraire
+stopnames=list(stoppoints.stop_name)
+
 
 #joli gui pour visualiser les données si jamais
 #from pandasgui import show
